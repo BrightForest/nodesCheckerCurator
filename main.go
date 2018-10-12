@@ -6,7 +6,7 @@ import (
 	"strconv"
 )
 
-func getConfiguration() *Configuration{
+func getConfiguration() *Configuration {
 	var config Configuration
 	config.KubernetesApiAddr = os.Getenv("KUBERNETES_PORT_443_TCP_ADDR")
 	config.ClusterAddr = "https://" + os.Getenv("KUBERNETES_PORT_443_TCP_ADDR") + os.Getenv("KUBERNETES_SERVICE_PORT_HTTP")

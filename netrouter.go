@@ -7,18 +7,18 @@ type netRouter struct {
 }
 
 type networkMessage struct {
-	Action string `json:"action"`
+	Action  string `json:"action"`
 	Content string `json:"content"`
 }
 
-func (netRouter *netRouter) RequestsRouter(podConnect *NodePodConnection, request *networkMessage){
+func (netRouter *netRouter) RequestsRouter(podConnect *NodePodConnection, request *networkMessage) {
 	switch request.Action {
 	case "ping":
 		go netRouter.Ping(podConnect, request)
 	case "registration":
 		go netRouter.Registration(podConnect, request)
 	case "nodeUpdate":
-		go netRouter.NodeUpdate(podConnect, request)
+		netRouter.NodeUpdate(podConnect, request)
 	case "alert":
 		go netRouter.Alert(podConnect, request)
 	default:
@@ -26,21 +26,21 @@ func (netRouter *netRouter) RequestsRouter(podConnect *NodePodConnection, reques
 	}
 }
 
-func (netRouter *netRouter) Ping(podConnect *NodePodConnection, message *networkMessage){
+func (netRouter *netRouter) Ping(podConnect *NodePodConnection, message *networkMessage) {
 	sendDataToClient(podConnect.PodNetworkChannel, &networkMessage{
 		"pong",
 		"",
 	})
 }
 
-func (netRouter *netRouter) Registration(podConnect *NodePodConnection, message *networkMessage){
+func (netRouter *netRouter) Registration(podConnect *NodePodConnection, message *networkMessage) {
 	var podRegistrationInfo NodePodSettings
 	err := json.Unmarshal([]byte(message.Content), &podRegistrationInfo)
-	if err != nil{
+	if err != nil {
 		sendDataToClient(podConnect.PodNetworkChannel, &networkMessage{
 			"registrationFailed",
 			"Unable to read registration JSON"})
-	} else{
+	} else {
 		podConnect.PodIsAvailable = true
 		podConnect.PodConf = &podRegistrationInfo
 		connectionData := &CuratorConnectionData{
@@ -48,7 +48,10 @@ func (netRouter *netRouter) Registration(podConnect *NodePodConnection, message 
 			podConnect,
 		}
 		publicRegistrationServiceLink.RegisterConnChannel <- connectionData
-		CuratorPodStatesMap[podRegistrationInfo.NodeName] = 1
+		publicRegistrationServiceLink.PodStatesChannel <- &PodState{
+			podRegistrationInfo.NodeName,
+			1,
+		}
 		sendDataToClient(podConnect.PodNetworkChannel, &networkMessage{
 			"registrationOk",
 			"",
@@ -57,30 +60,30 @@ func (netRouter *netRouter) Registration(podConnect *NodePodConnection, message 
 	}
 }
 
-func (netRouter *netRouter) NodeUpdate(podConnect *NodePodConnection, message *networkMessage){
+func (netRouter *netRouter) NodeUpdate(podConnect *NodePodConnection, message *networkMessage) {
 	var nodeMessage NodeMessage
 	err := json.Unmarshal([]byte(message.Content), &nodeMessage)
 	checkErr(err)
 	PublicUpdaterService.NodeMessagesChannel <- &nodeMessage
 }
 
-func (netRouter *netRouter) Alert(podConnect *NodePodConnection, message *networkMessage){
-	if CuratorNodesStateMap[podConnect.PodConf.NodeName] != 0{
+func (netRouter *netRouter) Alert(podConnect *NodePodConnection, message *networkMessage) {
+	if CuratorNodesStateMap[podConnect.PodConf.NodeName] != 0 {
 		var alertMessage AlertMessage
 		err := json.Unmarshal([]byte(message.Content), &alertMessage)
 		checkErr(err)
-		if SlackAlertBotIsActive == true{
+		if SlackAlertBotIsActive == true {
 			GlobalSlackAlertBot.AlertChannel <- alertMessage
 		}
 		Warning.Println(alertMessage.NodeName, "was lost contact with", alertMessage.DisconnectedNodeName, "Time:", alertMessage.DateTime)
 	}
 }
 
-func (netRouter *netRouter) NotRecognized(podConnect *NodePodConnection){
+func (netRouter *netRouter) NotRecognized(podConnect *NodePodConnection) {
 	networkAnswer := &networkMessage{"error", "notRecognized"}
 	sendDataToClient(podConnect.PodNetworkChannel, networkAnswer)
 }
 
-func sendDataToClient(podNetworkChannel chan *networkMessage, message *networkMessage){
+func sendDataToClient(podNetworkChannel chan *networkMessage, message *networkMessage) {
 	podNetworkChannel <- message
 }

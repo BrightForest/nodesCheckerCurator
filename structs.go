@@ -5,9 +5,9 @@ import (
 )
 
 type Configuration struct {
-	KubernetesApiAddr string
-	ClusterAddr string
-	AuthToken string
+	KubernetesApiAddr     string
+	ClusterAddr           string
+	AuthToken             string
 	ClusterApiConnTimeout int
 }
 
@@ -148,7 +148,6 @@ type PodList struct {
 	} `json:"items"`
 }
 
-
 type NodeList struct {
 	Kind       string `json:"kind"`
 	APIVersion string `json:"apiVersion"`
@@ -230,4 +229,3 @@ type NodeList struct {
 		} `json:"status"`
 	} `json:"items"`
 }
-
